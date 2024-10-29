@@ -18,6 +18,7 @@ frog.anchor.set(0.5, 1);
 frog.width = 50;
 frog.height = 50;
 frog.vy = 0;
+frog.vx = 0; // Добавляем горизонтальную скорость
 frog.isFalling = false;
 app.stage.addChild(frog);
 
@@ -26,24 +27,31 @@ const frogWidth = frog.width;
 const frogHeight = frog.height;
 
 // Настройки прыжка
-const minJumpHeight = frogHeight * 5; // Минимальная высота прыжка
-const maxJumpHeight = frogHeight * 0.5; // Максимальная высота прыжка
-const minJumpDistance = frogWidth * 2; // Минимальная длина прыжка
-const maxJumpDistance = frogWidth * 5; // Максимальная длина прыжка
+const minJumpHeight = frogHeight * 0.1; // Минимальная высота прыжка
+const maxJumpHeight = app.screen.height * 0.3; // Максимальная высота прыжка, ограничена до 30% высоты экрана
+const minJumpDistance = frogWidth * 3; // Увеличена минимальная длина прыжка для большей дальности
+const maxJumpDistance = frogWidth * 10; // Увеличенная максимальная длина прыжка для достижения следующей кувшинки
+const maxHoldTime = 0.5; // Максимальное время удержания пробела (в секундах)
+const maxVy = -10; // Максимальное значение для вертикальной скорости, чтобы не улетать за экран
 
-// Массив кувшинок
+// Массив кувшинок и переменная для отслеживания текущей кувшинки
 const lilyPads = [];
+let currentLilyPad = null; // Переменная для отслеживания кувшинки, на которой стоит жабка
+
+// Устанавливаем скорость движения кувшинок
+const lilyPadSpeed = 1; // Скорость движения кувшинок
 
 // Создаем первую кувшинку прямо под жабкой
 createLilyPad(app.screen.width / 4);
-frog.x = lilyPads[0].x;
-frog.y = lilyPads[0].y - frogHeight / 2;
+currentLilyPad = lilyPads[0]; // Привязываем жабку к первой кувшинке
+frog.x = currentLilyPad.x;
+frog.y = currentLilyPad.y - frogHeight / 2.5;
 
 // Создаем остальные кувшинки
 let initialX = frog.x + maxJumpDistance;
 for (let i = 1; i < 5; i++) {
   createLilyPad(initialX);
-  initialX += maxJumpDistance + 50;
+  initialX += maxJumpDistance;
 }
 
 // Функция для создания новой кувшинки
@@ -56,9 +64,10 @@ function createLilyPad(xPosition) {
   lilyPad.width = frogWidth * 3;
   lilyPad.height = frogHeight;
 
-  const minDistance = frogWidth * 3;
-  const maxDistance = frogWidth * 5;
-  const randomDistance = minDistance + Math.random() * (maxDistance - minDistance);
+  const minDistance = frogWidth * 0.001;
+  const maxDistance = frogWidth * 2;
+  const randomFactor = Math.random() * 0.5 + 0.5; // Множитель от 0.75 до 1.25 для изменения расстояния
+  const randomDistance = (minDistance + Math.random() * (maxDistance - minDistance)) * randomFactor;
 
   lilyPad.x = xPosition + randomDistance;
   app.stage.addChild(lilyPad);
@@ -68,23 +77,33 @@ function createLilyPad(xPosition) {
 // Настройки прыжка
 let isJumping = false;
 let jumpStartTime = 0;
+let isSpaceHeld = false; // Флаг для отслеживания удержания пробела
 
-// Добавляем слушатель для нажатия и удержания клавиши пробел
+// Добавляем слушатель для нажатия клавиши пробел
 window.addEventListener('keydown', (event) => {
-  if (event.code === 'Space' && !isJumping) {
+  if (event.code === 'Space' && !isJumping && !isSpaceHeld) {
     jumpStartTime = Date.now(); // Запоминаем время начала прыжка
+    isSpaceHeld = true; // Устанавливаем флаг удержания пробела
   }
 });
 
+// Добавляем слушатель для отпускания клавиши пробел
 window.addEventListener('keyup', (event) => {
   if (event.code === 'Space' && !isJumping) {
-    const holdTime = (Date.now() - jumpStartTime) / 1000;
+    const holdTime = Math.min((Date.now() - jumpStartTime) / 1000, maxHoldTime); // Ограничиваем holdTime до maxHoldTime
+    console.log("Hold Time:", holdTime); // Выводим время удержания в консоль
 
-    // Рассчитываем высоту и длину прыжка в зависимости от времени удержания
-    const jumpHeight = Math.min(minJumpHeight + holdTime * (maxJumpHeight - minJumpHeight), maxJumpHeight);
-    const jumpDistance = Math.min(minJumpDistance + holdTime * (maxJumpDistance - minJumpDistance), maxJumpDistance);
+    // Вычисляем коэффициент на основе времени удержания (от 0 до 1)
+    const holdRatio = holdTime / maxHoldTime;
 
+    // Рассчитываем высоту и длину прыжка в зависимости от коэффициента удержания
+    const jumpHeight = minJumpHeight + holdRatio * (maxJumpHeight - minJumpHeight);
+    const jumpDistance = minJumpDistance + holdRatio * (maxJumpDistance - minJumpDistance);
+
+    console.log("Calculated Jump Distance:", jumpDistance); // Выводим рассчитанную длину прыжка
     jumpFrog(jumpDistance, jumpHeight);
+
+    isSpaceHeld = false; // Сбрасываем флаг после завершения прыжка
   }
 });
 
@@ -92,23 +111,25 @@ window.addEventListener('keyup', (event) => {
 function jumpFrog(distance, height) {
   if (!isJumping) {
     isJumping = true;
-    frog.vy = -height; // Устанавливаем вертикальную скорость для прыжка
+    frog.vy = Math.max(-height, maxVy); // Устанавливаем вертикальную скорость для прыжка, ограниченную maxVy
+    frog.vx = distance / 15; // Устанавливаем горизонтальную скорость на основе рассчитанного расстояния
     frog.targetX = frog.x + distance; // Устанавливаем целевое положение по x
     frog.isFalling = false;
+    currentLilyPad = null; // Отключаем привязку к кувшинке при начале прыжка
   }
 }
 
 // Гравитация и проверка приземления
 function applyGravity() {
   if (isJumping) {
-    frog.vy += 0.5; // Применяем гравитацию
+    frog.vy += 0.3; // Гравитация для плавного прыжка
     frog.y += frog.vy;
+    frog.x += frog.vx; // Применяем горизонтальную скорость
 
-    // Проверка, достигла ли жабка целевой позиции по горизонтали
-    if (frog.x < frog.targetX) {
-      frog.x += 5;
-    } else {
+    // Проверка достижения целевой позиции по X
+    if ((frog.vx > 0 && frog.x >= frog.targetX) || (frog.vx < 0 && frog.x <= frog.targetX)) {
       frog.x = frog.targetX;
+      frog.vx = 0; // Останавливаем жабку по горизонтали
     }
 
     // Проверка приземления на кувшинку
@@ -121,12 +142,17 @@ function applyGravity() {
       ) {
         isJumping = false;
         frog.vy = 0;
-        frog.y = lilyPad.y - frogHeight / 2;
+        frog.y = lilyPad.y - frogHeight / 2.5; // Позиционируем жабку на кувшинке
+
+        // Устанавливаем жабку по центру кувшинки
+        frog.x = lilyPad.x;
+
         frog.isFalling = false;
-        shiftLilyPads();
+        currentLilyPad = lilyPad; // Привязываем жабку к кувшинке
         return;
       }
     }
+
 
     // Если жабка начинает падать после достижения максимальной высоты
     if (frog.vy > 0) {
@@ -140,28 +166,59 @@ function applyGravity() {
   }
 }
 
-// Функция для сдвига кувшинок влево
-function shiftLilyPads() {
+// Главный игровой цикл
+app.ticker.add(() => {
+  applyGravity();
+
+  // Двигаем кувшинки справа налево
   lilyPads.forEach(lilyPad => {
-    lilyPad.x -= maxJumpDistance;
+    lilyPad.x -= lilyPadSpeed;
   });
+
+  // Если жабка стоит на кувшинке, обновляем её позицию вместе с кувшинкой
+  if (!isJumping && currentLilyPad) {
+    frog.x = currentLilyPad.x;
+  }
 
   // Удаляем кувшинку за пределами экрана и добавляем новую кувшинку справа
   if (lilyPads[0].x < -lilyPads[0].width) {
     const removedLilyPad = lilyPads.shift();
     app.stage.removeChild(removedLilyPad);
     const lastLilyPadX = lilyPads[lilyPads.length - 1].x;
-    createLilyPad(lastLilyPadX + maxJumpDistance + 50);
+    createLilyPad(lastLilyPadX + maxJumpDistance);
   }
-}
+});
 
 // Функция окончания игры
 function endGame() {
   alert('Game Over! Try again.');
-  location.reload();
+  document.getElementById('restartButton').style.display = 'block'; // Показываем кнопку перезапуска
 }
 
-// Главный игровой цикл
-app.ticker.add(() => {
-  applyGravity();
-});
+// Добавляем слушатель к кнопке перезапуска
+document.getElementById('restartButton').addEventListener('click', restartGame);
+
+// Функция для перезапуска игры
+function restartGame() {
+  document.getElementById('restartButton').style.display = 'none'; // Скрываем кнопку
+  currentLilyPad = lilyPads[0]; // Привязываем жабку к первой кувшинке при перезапуске
+  frog.x = currentLilyPad.x; // Возвращаем жабку на начальную кувшинку
+  frog.y = currentLilyPad.y - frogHeight;
+  frog.vy = 0;
+  frog.vx = 0;
+  isJumping = false;
+  jumpStartTime = 0;
+
+  // Очищаем массив кувшинок и создаем новые
+  lilyPads.forEach(lilyPad => app.stage.removeChild(lilyPad));
+  lilyPads.length = 0;
+  createLilyPad(app.screen.width / 4);
+  frog.x = lilyPads[0].x;
+  frog.y = lilyPads[0].y - frogHeight;
+
+  let initialX = frog.x + maxJumpDistance;
+  for (let i = 1; i < 5; i++) {
+    createLilyPad(initialX);
+    initialX += maxJumpDistance;
+  }
+}
