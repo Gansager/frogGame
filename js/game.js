@@ -65,8 +65,8 @@ function createLilyPad(xPosition) {
   lilyPad.height = frogHeight;
 
   const minDistance = frogWidth * 0.001;
-  const maxDistance = frogWidth * 2;
-  const randomFactor = Math.random() * 0.5 + 0.5; // Множитель от 0.75 до 1.25 для изменения расстояния
+  const maxDistance = frogWidth * 4;
+  const randomFactor = Math.random() * 0.2 + 0.5; // Множитель от 0.75 до 1.25 для изменения расстояния
   const randomDistance = (minDistance + Math.random() * (maxDistance - minDistance)) * randomFactor;
 
   lilyPad.x = xPosition + randomDistance;
@@ -107,64 +107,75 @@ window.addEventListener('keyup', (event) => {
   }
 });
 
-// Функция прыжка
-function jumpFrog(distance, height) {
-  if (!isJumping) {
-    isJumping = true;
-    frog.vy = Math.max(-height, maxVy); // Устанавливаем вертикальную скорость для прыжка, ограниченную maxVy
-    frog.vx = distance / 15; // Устанавливаем горизонтальную скорость на основе рассчитанного расстояния
-    frog.targetX = frog.x + distance; // Устанавливаем целевое положение по x
-    frog.isFalling = false;
-    currentLilyPad = null; // Отключаем привязку к кувшинке при начале прыжка
-  }
-}
-
-// Гравитация и проверка приземления
+// Гравитация и параболическая траектория прыжка
 function applyGravity() {
   if (isJumping) {
-    frog.vy += 0.3; // Гравитация для плавного прыжка
-    frog.y += frog.vy;
-    frog.x += frog.vx; // Применяем горизонтальную скорость
+    // Увеличиваем время, чтобы рассчитать следующую позицию
+    frog.time += 0.05; // Задаем небольшое приращение для плавного движения
 
-    // Проверка достижения целевой позиции по X
-    if ((frog.vx > 0 && frog.x >= frog.targetX) || (frog.vx < 0 && frog.x <= frog.targetX)) {
-      frog.x = frog.targetX;
-      frog.vx = 0; // Останавливаем жабку по горизонтали
-    }
+    // Рассчитываем x-позицию (линейное движение к целевой точке)
+    const progress = Math.min(frog.time / 1, 1); // Ограничиваем прогресс до 1
+    frog.x = frog.startX + (frog.targetX - frog.startX) * progress;
+
+    // Рассчитываем y-позицию (параболическая траектория)
+    const a = frog.startY; // Начальная позиция
+    const b = frog.peakY;  // Пиковая точка (высота)
+    const c = frog.startY; // Конечная позиция
+    frog.y = (1 - progress) * ((1 - progress) * a + progress * b) + progress * ((1 - progress) * b + progress * c);
 
     // Проверка приземления на кувшинку
+    let landedOnLilyPad = false;
     for (let i = 0; i < lilyPads.length; i++) {
       const lilyPad = lilyPads[i];
       if (
         Math.abs(frog.x - lilyPad.x) < lilyPad.width / 2 &&
-        frog.y >= lilyPad.y - frogHeight / 2 &&
-        frog.isFalling
+        frog.y >= lilyPad.y - frogHeight / 2
       ) {
         isJumping = false;
         frog.vy = 0;
         frog.y = lilyPad.y - frogHeight / 2.5; // Позиционируем жабку на кувшинке
-
-        // Устанавливаем жабку по центру кувшинки
         frog.x = lilyPad.x;
-
-        frog.isFalling = false;
         currentLilyPad = lilyPad; // Привязываем жабку к кувшинке
-        return;
+        landedOnLilyPad = true;
+        break;
       }
     }
 
+   // Если прыжок завершен, но жабка не приземлилась на кувшинку, заканчиваем игру
+   if (!landedOnLilyPad && progress === 1) {
+    frog.isFalling = true; // Устанавливаем флаг падения
+  }
 
-    // Если жабка начинает падать после достижения максимальной высоты
-    if (frog.vy > 0) {
-      frog.isFalling = true;
-    }
+  // Если жабка в режиме падения, увеличиваем вертикальную скорость
+  if (frog.isFalling) {
+    frog.vy += 10; // Ускоряем падение
+    frog.y += frog.vy;
+  }
 
-    // Проверка на падение за пределы экрана
-    if (frog.y > app.screen.height) {
-      endGame();
+  // Проверка на падение за пределы экрана
+  if (frog.y > app.screen.height) {
+    endGame(); // Завершаем игру, когда жабка выходит за пределы экрана
     }
   }
 }
+
+// Функция для завершения игры
+function endGame() {
+  document.getElementById('restartButton').style.display = 'block'; // Показываем кнопку перезапуска
+}
+
+// Начинаем прыжок с параболической траекторией
+function jumpFrog(distance, height) {
+  if (!isJumping) {
+    isJumping = true;
+    frog.startX = frog.x;
+    frog.startY = frog.y;
+    frog.targetX = frog.startX + distance;
+    frog.peakY = frog.startY - height; // Пик высоты прыжка
+    frog.time = 0; // Обнуление времени прыжка
+  }
+}
+
 
 // Главный игровой цикл
 app.ticker.add(() => {
@@ -189,10 +200,6 @@ app.ticker.add(() => {
   }
 });
 
-// Функция окончания игры
-function endGame() {
-  document.getElementById('restartButton').style.display = 'block'; // Показываем кнопку перезапуска
-}
 
 // Добавляем слушатель к кнопке перезапуска
 document.getElementById('restartButton').addEventListener('click', restartGame);
