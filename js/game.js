@@ -28,11 +28,11 @@ const frogHeight = frog.height;
 
 // Настройки прыжка
 const minJumpHeight = frogHeight * 0.1; // Минимальная высота прыжка
-const maxJumpHeight = app.screen.height * 0.3; // Максимальная высота прыжка, ограничена до 30% высоты экрана
+const maxJumpHeight = app.screen.height * 3; // Максимальная высота прыжка, ограничена до 30% высоты экрана
 const minJumpDistance = frogWidth * 3; // Увеличена минимальная длина прыжка для большей дальности
 const maxJumpDistance = frogWidth * 10; // Увеличенная максимальная длина прыжка для достижения следующей кувшинки
 const maxHoldTime = 0.5; // Максимальное время удержания пробела (в секундах)
-const maxVy = -10; // Максимальное значение для вертикальной скорости, чтобы не улетать за экран
+const maxVy = -15; // Максимальное значение для вертикальной скорости, чтобы не улетать за экран
 
 // Массив кувшинок и переменная для отслеживания текущей кувшинки
 const lilyPads = [];
@@ -191,34 +191,12 @@ app.ticker.add(() => {
 
 // Функция окончания игры
 function endGame() {
-  alert('Game Over! Try again.');
   document.getElementById('restartButton').style.display = 'block'; // Показываем кнопку перезапуска
 }
 
 // Добавляем слушатель к кнопке перезапуска
 document.getElementById('restartButton').addEventListener('click', restartGame);
 
-// Функция для перезапуска игры
 function restartGame() {
-  document.getElementById('restartButton').style.display = 'none'; // Скрываем кнопку
-  currentLilyPad = lilyPads[0]; // Привязываем жабку к первой кувшинке при перезапуске
-  frog.x = currentLilyPad.x; // Возвращаем жабку на начальную кувшинку
-  frog.y = currentLilyPad.y - frogHeight;
-  frog.vy = 0;
-  frog.vx = 0;
-  isJumping = false;
-  jumpStartTime = 0;
-
-  // Очищаем массив кувшинок и создаем новые
-  lilyPads.forEach(lilyPad => app.stage.removeChild(lilyPad));
-  lilyPads.length = 0;
-  createLilyPad(app.screen.width / 4);
-  frog.x = lilyPads[0].x;
-  frog.y = lilyPads[0].y - frogHeight;
-
-  let initialX = frog.x + maxJumpDistance;
-  for (let i = 1; i < 5; i++) {
-    createLilyPad(initialX);
-    initialX += maxJumpDistance;
-  }
+  location.reload(); // Перезагружает страницу, чтобы перезапустить игру
 }
