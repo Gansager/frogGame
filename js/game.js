@@ -18,40 +18,33 @@ frog.anchor.set(0.5, 1);
 frog.width = 50;
 frog.height = 50;
 frog.vy = 0;
-frog.vx = 0; // Добавляем горизонтальную скорость
-frog.isFalling = false;
+frog.vx = 0;
 app.stage.addChild(frog);
 
-// Теперь можем использовать заданное значение ширины
-const frogWidth = frog.width;
-const frogHeight = frog.height;
-
 // Настройки прыжка
-const minJumpHeight = frogHeight * 0.1; // Минимальная высота прыжка
-const maxJumpHeight = app.screen.height * 3; // Максимальная высота прыжка, ограничена до 30% высоты экрана
-const minJumpDistance = frogWidth * 3; // Увеличена минимальная длина прыжка для большей дальности
-const maxJumpDistance = frogWidth * 10; // Увеличенная максимальная длина прыжка для достижения следующей кувшинки
-const maxHoldTime = 0.5; // Максимальное время удержания пробела (в секундах)
-const maxVy = -15; // Максимальное значение для вертикальной скорости, чтобы не улетать за экран
+const jumpPower = -15; // Начальная вертикальная скорость при прыжке
+const gravity = 0.8;   // Гравитация, притягивающая жабку вниз
+const horizontalSpeed = 5; // Скорость горизонтального движения
+const maxJumpHeight = app.screen.height * 0.75; // Максимальная высота прыжка (75% высоты экрана)
 
 // Массив кувшинок и переменная для отслеживания текущей кувшинки
 const lilyPads = [];
-let currentLilyPad = null; // Переменная для отслеживания кувшинки, на которой стоит жабка
+let currentLilyPad = null;
 
 // Устанавливаем скорость движения кувшинок
-const lilyPadSpeed = 1; // Скорость движения кувшинок
+const lilyPadSpeed = 1;
 
 // Создаем первую кувшинку прямо под жабкой
 createLilyPad(app.screen.width / 4);
-currentLilyPad = lilyPads[0]; // Привязываем жабку к первой кувшинке
+currentLilyPad = lilyPads[0];
 frog.x = currentLilyPad.x;
-frog.y = currentLilyPad.y - frogHeight / 2.5;
+frog.y = currentLilyPad.y - frog.height / 2.5;
 
 // Создаем остальные кувшинки
-let initialX = frog.x + maxJumpDistance;
+let initialX = frog.x + 300;
 for (let i = 1; i < 5; i++) {
   createLilyPad(initialX);
-  initialX += maxJumpDistance;
+  initialX += 300;
 }
 
 // Функция для создания новой кувшинки
@@ -61,121 +54,95 @@ function createLilyPad(xPosition) {
 
   lilyPad.anchor.set(0.5);
   lilyPad.y = app.screen.height - 150;
-  lilyPad.width = frogWidth * 3;
-  lilyPad.height = frogHeight;
+  lilyPad.width = frog.width * 3;
+  lilyPad.height = frog.height;
 
-  const minDistance = frogWidth * 0.001;
-  const maxDistance = frogWidth * 4;
-  const randomFactor = Math.random() * 0.2 + 0.5; // Множитель от 0.75 до 1.25 для изменения расстояния
-  const randomDistance = (minDistance + Math.random() * (maxDistance - minDistance)) * randomFactor;
-
-  lilyPad.x = xPosition + randomDistance;
+  lilyPad.x = xPosition;
   app.stage.addChild(lilyPad);
   lilyPads.push(lilyPad);
 }
 
 // Настройки прыжка
 let isJumping = false;
-let jumpStartTime = 0;
-let isSpaceHeld = false; // Флаг для отслеживания удержания пробела
+let isVoiceJumping = false; // Флаг для отслеживания прыжка от голоса
 
 // Добавляем слушатель для нажатия клавиши пробел
 window.addEventListener('keydown', (event) => {
-  if (event.code === 'Space' && !isJumping && !isSpaceHeld) {
-    jumpStartTime = Date.now(); // Запоминаем время начала прыжка
-    isSpaceHeld = true; // Устанавливаем флаг удержания пробела
+  if (event.code === 'Space' && !isJumping) {
+    startJump(); // Начинаем прыжок при нажатии пробела
   }
 });
 
 // Добавляем слушатель для отпускания клавиши пробел
 window.addEventListener('keyup', (event) => {
-  if (event.code === 'Space' && !isJumping) {
-    const holdTime = Math.min((Date.now() - jumpStartTime) / 1000, maxHoldTime); // Ограничиваем holdTime до maxHoldTime
-    console.log("Hold Time:", holdTime); // Выводим время удержания в консоль
-
-    // Вычисляем коэффициент на основе времени удержания (от 0 до 1)
-    const holdRatio = holdTime / maxHoldTime;
-
-    // Рассчитываем высоту и длину прыжка в зависимости от коэффициента удержания
-    const jumpHeight = minJumpHeight + holdRatio * (maxJumpHeight - minJumpHeight);
-    const jumpDistance = minJumpDistance + holdRatio * (maxJumpDistance - minJumpDistance);
-
-    console.log("Calculated Jump Distance:", jumpDistance); // Выводим рассчитанную длину прыжка
-    jumpFrog(jumpDistance, jumpHeight);
-
-    isSpaceHeld = false; // Сбрасываем флаг после завершения прыжка
+  if (event.code === 'Space') {
+    endJump(); // Завершаем прыжок при отпускании пробела
   }
 });
 
-// Гравитация и параболическая траектория прыжка
+// Функция для начала прыжка
+function startJump() {
+  isJumping = true;
+  frog.vy = jumpPower; // Задаем начальную вертикальную скорость вверх
+  frog.vx = horizontalSpeed; // Устанавливаем начальную горизонтальную скорость вправо
+}
+
+// Функция для завершения прыжка
+function endJump() {
+  isJumping = false; // После отпускания пробела гравитация начинает тянуть жабку вниз
+  if (!isVoiceJumping) {
+    // Если голосовой прыжок также не активен, жабка начинает падать
+    frog.vy += gravity;
+  }
+}
+
+// Гравитация и движение
 function applyGravity() {
-  if (isJumping) {
-    // Увеличиваем время, чтобы рассчитать следующую позицию
-    frog.time += 0.05; // Задаем небольшое приращение для плавного движения
+  if (isJumping || isVoiceJumping) {
+    frog.y += frog.vy; // Продолжаем подъем
+    frog.x += frog.vx; // Продолжаем движение вправо
 
-    // Рассчитываем x-позицию (линейное движение к целевой точке)
-    const progress = Math.min(frog.time / 1, 1); // Ограничиваем прогресс до 1
-    frog.x = frog.startX + (frog.targetX - frog.startX) * progress;
-
-    // Рассчитываем y-позицию (параболическая траектория)
-    const a = frog.startY; // Начальная позиция
-    const b = frog.peakY;  // Пиковая точка (высота)
-    const c = frog.startY; // Конечная позиция
-    frog.y = (1 - progress) * ((1 - progress) * a + progress * b) + progress * ((1 - progress) * b + progress * c);
-
-    // Проверка приземления на кувшинку
-    let landedOnLilyPad = false;
-    for (let i = 0; i < lilyPads.length; i++) {
-      const lilyPad = lilyPads[i];
-      if (
-        Math.abs(frog.x - lilyPad.x) < lilyPad.width / 2 &&
-        frog.y >= lilyPad.y - frogHeight / 2
-      ) {
-        isJumping = false;
-        frog.vy = 0;
-        frog.y = lilyPad.y - frogHeight / 2.5; // Позиционируем жабку на кувшинке
-        frog.x = lilyPad.x;
-        currentLilyPad = lilyPad; // Привязываем жабку к кувшинке
-        landedOnLilyPad = true;
-        break;
-      }
+    // Ограничение высоты прыжка
+    if (frog.y <= app.screen.height - maxJumpHeight) {
+      frog.y = app.screen.height - maxJumpHeight; // Ограничиваем высоту
+      frog.vy = 0; // Останавливаем вертикальное движение вверх
     }
-
-   // Если прыжок завершен, но жабка не приземлилась на кувшинку, заканчиваем игру
-   if (!landedOnLilyPad && progress === 1) {
-    frog.isFalling = true; // Устанавливаем флаг падения
-  }
-
-  // Если жабка в режиме падения, увеличиваем вертикальную скорость
-  if (frog.isFalling) {
-    frog.vy += 10; // Ускоряем падение
+  } else {
+    frog.vy += gravity; // Гравитация начинает тянуть жабку вниз
     frog.y += frog.vy;
+    frog.x += frog.vx; // Продолжаем горизонтальное движение даже после отпускания пробела
   }
 
-  // Проверка на падение за пределы экрана
-  if (frog.y > app.screen.height) {
-    endGame(); // Завершаем игру, когда жабка выходит за пределы экрана
+  // Проверка приземления на кувшинку
+  let landedOnLilyPad = false;
+  for (let i = 0; i < lilyPads.length; i++) {
+    const lilyPad = lilyPads[i];
+    if (
+      Math.abs(frog.x - lilyPad.x) < lilyPad.width / 2 &&
+      frog.y >= lilyPad.y - frog.height / 2
+    ) {
+      isJumping = false;
+      isVoiceJumping = false; // Останавливаем голосовой прыжок при приземлении
+      frog.vy = 0;
+      frog.vx = 0; // Останавливаем горизонтальное движение после приземления
+      frog.y = lilyPad.y - frog.height / 2.5;
+      frog.x = lilyPad.x;
+      currentLilyPad = lilyPad;
+      landedOnLilyPad = true;
+      break;
     }
+  }
+
+  // Если жабка не приземлилась на кувшинку и вышла за экран, заканчиваем игру
+  if (!landedOnLilyPad && frog.y > app.screen.height) {
+    endGame();
   }
 }
 
 // Функция для завершения игры
 function endGame() {
-  document.getElementById('restartButton').style.display = 'block'; // Показываем кнопку перезапуска
+  document.getElementById('restartButton').style.display = 'block';
 }
-
-// Начинаем прыжок с параболической траекторией
-function jumpFrog(distance, height) {
-  if (!isJumping) {
-    isJumping = true;
-    frog.startX = frog.x;
-    frog.startY = frog.y;
-    frog.targetX = frog.startX + distance;
-    frog.peakY = frog.startY - height; // Пик высоты прыжка
-    frog.time = 0; // Обнуление времени прыжка
-  }
-}
-
 
 // Главный игровой цикл
 app.ticker.add(() => {
@@ -186,24 +153,60 @@ app.ticker.add(() => {
     lilyPad.x -= lilyPadSpeed;
   });
 
-  // Если жабка стоит на кувшинке, обновляем её позицию вместе с кувшинкой
-  if (!isJumping && currentLilyPad) {
-    frog.x = currentLilyPad.x;
-  }
-
   // Удаляем кувшинку за пределами экрана и добавляем новую кувшинку справа
   if (lilyPads[0].x < -lilyPads[0].width) {
     const removedLilyPad = lilyPads.shift();
     app.stage.removeChild(removedLilyPad);
     const lastLilyPadX = lilyPads[lilyPads.length - 1].x;
-    createLilyPad(lastLilyPadX + maxJumpDistance);
+    createLilyPad(lastLilyPadX + 300);
   }
 });
-
 
 // Добавляем слушатель к кнопке перезапуска
 document.getElementById('restartButton').addEventListener('click', restartGame);
 
 function restartGame() {
-  location.reload(); // Перезагружает страницу, чтобы перезапустить игру
+  location.reload();
+}
+
+// Управление голосом с помощью Web Speech API
+if ('webkitSpeechRecognition' in window) {
+  const recognition = new webkitSpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onresult = (event) => {
+    let isSpeaking = false;
+
+    // Проверяем, есть ли промежуточные результаты (interimResults)
+    for (let i = 0; i < event.results.length; i++) {
+      if (!event.results[i].isFinal && event.results[i][0].transcript.trim() !== "") {
+        isSpeaking = true;
+        break;
+      }
+    }
+
+    if (isSpeaking && !isVoiceJumping) {
+      isVoiceJumping = true;
+      startJump(); // Начинаем прыжок от голоса
+    } else if (!isSpeaking && isVoiceJumping) {
+      isVoiceJumping = false;
+      endJump(); // Завершаем прыжок, если голос прекратился
+    }
+  };
+
+  recognition.onend = () => {
+    isVoiceJumping = false;
+    endJump(); // Завершаем прыжок, если распознавание завершено
+    recognition.start(); // Перезапускаем распознавание для непрерывного прослушивания
+  };
+
+  recognition.onerror = (event) => {
+    console.error("Voice recognition error", event);
+  };
+
+  // Начинаем прослушивание
+  recognition.start();
+} else {
+  alert("Ваш браузер не поддерживает распознавание голоса.");
 }
