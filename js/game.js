@@ -64,7 +64,7 @@ function createLilyPad(xPosition) {
 
 // Настройки прыжка
 let isJumping = false;
-let isVoiceJumping = false; // Флаг для отслеживания прыжка от голоса
+let isVoiceJumping = false; // Флаг для отслеживания прыжка от громкости звука
 
 // Добавляем слушатель для нажатия клавиши пробел
 window.addEventListener('keydown', (event) => {
@@ -169,44 +169,41 @@ function restartGame() {
   location.reload();
 }
 
-// Управление голосом с помощью Web Speech API
-if ('webkitSpeechRecognition' in window) {
-  const recognition = new webkitSpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true;
+// Управление голосом с помощью Web Audio API
+async function setupAudio() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
 
-  recognition.onresult = (event) => {
-    let isSpeaking = false;
+    const source = audioContext.createMediaStreamSource(stream);
+    source.connect(analyser);
 
-    // Проверяем, есть ли промежуточные результаты (interimResults)
-    for (let i = 0; i < event.results.length; i++) {
-      if (!event.results[i].isFinal && event.results[i][0].transcript.trim() !== "") {
-        isSpeaking = true;
-        break;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    function checkVolume() {
+      analyser.getByteFrequencyData(dataArray);
+      const volume = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+
+      // Порог чувствительности (можете настроить его в зависимости от чувствительности микрофона)
+      const volumeThreshold = 20;
+
+      if (volume > volumeThreshold && !isVoiceJumping) {
+        isVoiceJumping = true;
+        startJump(); // Начинаем прыжок при превышении порога
+      } else if (volume <= volumeThreshold && isVoiceJumping) {
+        isVoiceJumping = false;
+        endJump(); // Завершаем прыжок при отсутствии громкости
       }
+
+      requestAnimationFrame(checkVolume);
     }
 
-    if (isSpeaking && !isVoiceJumping) {
-      isVoiceJumping = true;
-      startJump(); // Начинаем прыжок от голоса
-    } else if (!isSpeaking && isVoiceJumping) {
-      isVoiceJumping = false;
-      endJump(); // Завершаем прыжок, если голос прекратился
-    }
-  };
-
-  recognition.onend = () => {
-    isVoiceJumping = false;
-    endJump(); // Завершаем прыжок, если распознавание завершено
-    recognition.start(); // Перезапускаем распознавание для непрерывного прослушивания
-  };
-
-  recognition.onerror = (event) => {
-    console.error("Voice recognition error", event);
-  };
-
-  // Начинаем прослушивание
-  recognition.start();
-} else {
-  alert("Ваш браузер не поддерживает распознавание голоса.");
+    checkVolume();
+  } catch (err) {
+    console.error("Error accessing audio stream:", err);
+  }
 }
+
+setupAudio();
