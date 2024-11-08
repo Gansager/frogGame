@@ -1,9 +1,6 @@
 let score = 0; // Текущий счет
 let highScore = parseInt(localStorage.getItem('highScore')) || 0; // Рекорд из localStorage или 0
 
-// Подключаем PixiJS
-import * as PIXI from 'pixi.js';
-
 // Создаем приложение PixiJS
 const app = new PIXI.Application({
   width: window.innerWidth,
