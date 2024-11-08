@@ -1,3 +1,6 @@
+let score = 0; // Текущий счет
+let highScore = parseInt(localStorage.getItem('highScore')) || 0; // Рекорд из localStorage или 0
+
 // Подключаем PixiJS
 import * as PIXI from 'pixi.js';
 
@@ -7,6 +10,28 @@ const app = new PIXI.Application({
   height: window.innerHeight,
   backgroundColor: 0x87CEEB, // Цвет фона
 });
+
+// Определяем стиль текста для счета и рекорда
+const scoreStyle = new PIXI.TextStyle({
+  fontFamily: 'Arial',
+  fontSize: 32,
+  fill: '#ffffff',
+  fontWeight: 'bold',
+});
+
+const scoreText = new PIXI.Text(`Score: ${score}`, scoreStyle);
+scoreText.anchor.set(1, 0); // Устанавливаем якорь справа сверху
+scoreText.x = app.screen.width - 20; // Отступ от правого края
+scoreText.y = 20; // Отступ от верхнего края
+app.stage.addChild(scoreText);
+
+// Рекорд
+const highScoreText = new PIXI.Text(`High Score: ${highScore}`, scoreStyle);
+highScoreText.anchor.set(1, 0); // Устанавливаем якорь справа сверху
+highScoreText.x = app.screen.width - 20; // Отступ от правого края
+highScoreText.y = 60; // Отступ под текущим счетом
+app.stage.addChild(highScoreText);
+
 
 // Добавляем Canvas в DOM
 document.body.appendChild(app.view);
@@ -31,8 +56,10 @@ const maxJumpHeight = app.screen.height * 0.75; // Максимальная вы
 const lilyPads = [];
 let currentLilyPad = null;
 
-// Устанавливаем скорость движения кувшинок
-const lilyPadSpeed = 1;
+// Устанавливаем начальную скорость движения кувшинок
+let lilyPadSpeed = 1;
+const maxLilyPadSpeed = 3; // Ограничение максимальной скорости кувшинок
+let isGameOver = false; // Флаг для остановки игры
 
 // Создаем первую кувшинку прямо под жабкой
 createLilyPad(app.screen.width / 4);
@@ -68,14 +95,14 @@ let isVoiceJumping = false; // Флаг для отслеживания прыж
 
 // Добавляем слушатель для нажатия клавиши пробел
 window.addEventListener('keydown', (event) => {
-  if (event.code === 'Space' && !isJumping) {
+  if (event.code === 'Space' && !isJumping && !isGameOver) {
     startJump(); // Начинаем прыжок при нажатии пробела
   }
 });
 
 // Добавляем слушатель для отпускания клавиши пробел
 window.addEventListener('keyup', (event) => {
-  if (event.code === 'Space') {
+  if (event.code === 'Space' && !isGameOver) {
     endJump(); // Завершаем прыжок при отпускании пробела
   }
 });
@@ -91,26 +118,26 @@ function startJump() {
 function endJump() {
   isJumping = false; // После отпускания пробела гравитация начинает тянуть жабку вниз
   if (!isVoiceJumping) {
-    // Если голосовой прыжок также не активен, жабка начинает падать
     frog.vy += gravity;
   }
 }
 
 // Гравитация и движение
 function applyGravity() {
+  if (isGameOver) return; // Прекращаем движение, если игра окончена
+
   if (isJumping || isVoiceJumping) {
     frog.y += frog.vy; // Продолжаем подъем
     frog.x += frog.vx; // Продолжаем движение вправо
 
-    // Ограничение высоты прыжка
     if (frog.y <= app.screen.height - maxJumpHeight) {
       frog.y = app.screen.height - maxJumpHeight; // Ограничиваем высоту
-      frog.vy = 0; // Останавливаем вертикальное движение вверх
+      frog.vy = 0;
     }
   } else {
-    frog.vy += gravity; // Гравитация начинает тянуть жабку вниз
+    frog.vy += gravity;
     frog.y += frog.vy;
-    frog.x += frog.vx; // Продолжаем горизонтальное движение даже после отпускания пробела
+    frog.x += frog.vx;
   }
 
   // Проверка приземления на кувшинку
@@ -122,13 +149,28 @@ function applyGravity() {
       frog.y >= lilyPad.y - frog.height / 2
     ) {
       isJumping = false;
-      isVoiceJumping = false; // Останавливаем голосовой прыжок при приземлении
+      isVoiceJumping = false;
       frog.vy = 0;
-      frog.vx = 0; // Останавливаем горизонтальное движение после приземления
+      frog.vx = 0;
       frog.y = lilyPad.y - frog.height / 2.5;
       frog.x = lilyPad.x;
       currentLilyPad = lilyPad;
       landedOnLilyPad = true;
+
+       // Увеличиваем счет и обновляем текст
+  score++;
+  scoreText.text = `Score: ${score}`;
+
+  // Обновляем рекорд, если счет превысил его
+  if (score > highScore) {
+    highScore = score;
+    highScoreText.text = `High Score: ${highScore}`;
+    localStorage.setItem('highScore', highScore); // Сохраняем рекорд в localStorage
+  }
+
+      // Увеличиваем скорость кувшинок на 5%, с ограничением максимальной скорости
+      lilyPadSpeed = Math.min(lilyPadSpeed * 1.05, maxLilyPadSpeed);
+      console.log("Успешный прыжок! Новая скорость кувшинок:", lilyPadSpeed);
       break;
     }
   }
@@ -141,24 +183,43 @@ function applyGravity() {
 
 // Функция для завершения игры
 function endGame() {
+  isGameOver = true;
+
+  // Отображение текста "Game Over"
+  const style = new PIXI.TextStyle({
+    fontFamily: 'Arial',
+    fontSize: 64,
+    fill: 'red',
+    align: 'center',
+    fontWeight: 'bold'
+  });
+  const gameOverText = new PIXI.Text('Game Over', style);
+  gameOverText.anchor.set(0.5);
+  gameOverText.x = app.screen.width / 2;
+  gameOverText.y = app.screen.height / 2;
+  app.stage.addChild(gameOverText);
+
+  // Показываем кнопку перезапуска
   document.getElementById('restartButton').style.display = 'block';
 }
 
 // Главный игровой цикл
 app.ticker.add(() => {
-  applyGravity();
+  if (!isGameOver) {
+    applyGravity();
 
-  // Двигаем кувшинки справа налево
-  lilyPads.forEach(lilyPad => {
-    lilyPad.x -= lilyPadSpeed;
-  });
+    // Двигаем кувшинки справа налево
+    lilyPads.forEach(lilyPad => {
+      lilyPad.x -= lilyPadSpeed;
+    });
 
-  // Удаляем кувшинку за пределами экрана и добавляем новую кувшинку справа
-  if (lilyPads[0].x < -lilyPads[0].width) {
-    const removedLilyPad = lilyPads.shift();
-    app.stage.removeChild(removedLilyPad);
-    const lastLilyPadX = lilyPads[lilyPads.length - 1].x;
-    createLilyPad(lastLilyPadX + 300);
+    // Удаляем кувшинку за пределами экрана и добавляем новую кувшинку справа
+    if (lilyPads[0].x < -lilyPads[0].width) {
+      const removedLilyPad = lilyPads.shift();
+      app.stage.removeChild(removedLilyPad);
+      const lastLilyPadX = lilyPads[lilyPads.length - 1].x;
+      createLilyPad(lastLilyPadX + 300);
+    }
   }
 });
 
@@ -166,7 +227,9 @@ app.ticker.add(() => {
 document.getElementById('restartButton').addEventListener('click', restartGame);
 
 function restartGame() {
-  location.reload();
+  score = 0; // Сбрасываем текущий счет
+  scoreText.text = `Score: ${score}`; // Обновляем текст счета
+  location.reload(); // Перезагружает страницу, чтобы перезапустить игру
 }
 
 // Управление голосом с помощью Web Audio API
@@ -186,15 +249,15 @@ async function setupAudio() {
       analyser.getByteFrequencyData(dataArray);
       const volume = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
 
-      // Порог чувствительности (можете настроить его в зависимости от чувствительности микрофона)
+      // Порог чувствительности
       const volumeThreshold = 20;
 
-      if (volume > volumeThreshold && !isVoiceJumping) {
+      if (volume > volumeThreshold && !isVoiceJumping && !isGameOver) {
         isVoiceJumping = true;
-        startJump(); // Начинаем прыжок при превышении порога
+        startJump();
       } else if (volume <= volumeThreshold && isVoiceJumping) {
         isVoiceJumping = false;
-        endJump(); // Завершаем прыжок при отсутствии громкости
+        endJump();
       }
 
       requestAnimationFrame(checkVolume);
