@@ -71,6 +71,32 @@ for (let i = 1; i < 5; i++) {
   initialX += 300;
 }
 
+// Функция для установки позиции объектов
+function setPositionForMobile() {
+  const isMobile = window.innerWidth < 768; // Проверка на мобильное устройство
+
+  // Устанавливаем Y-координаты для лилий и жабки в зависимости от устройства
+  lilyPads.forEach((lilyPad) => {
+    lilyPad.y = isMobile ? app.screen.height - 100 : app.screen.height - 150;
+  });
+
+  frog.y = currentLilyPad.y - frog.height / 2.5;
+}
+
+// Вызываем функцию установки позиции при загрузке
+setPositionForMobile();
+
+// Вызываем при изменении размера экрана
+window.addEventListener('resize', () => {
+  app.renderer.resize(window.innerWidth, window.innerHeight);
+  setPositionForMobile();
+  // Обновление позиции текста счёта и других элементов при изменении экрана
+  scoreText.x = app.screen.width - 20;
+  highScoreText.x = app.screen.width - 20;
+  highScoreText.y = scoreText.height + 20;
+});
+
+
 // Функция для создания новой кувшинки
 function createLilyPad(xPosition) {
   const lilyPadTexture = PIXI.Texture.from('img/lilyPad.png');
