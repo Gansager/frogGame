@@ -42,9 +42,9 @@ frog.vx = 0;
 app.stage.addChild(frog);
 
 // Настройки прыжка
-const jumpPower = -15;
-const gravity = 0.8;
-const horizontalSpeed = 5;
+const jumpPower = -8;
+const gravity = 0.4;
+const horizontalSpeed = 3;
 const maxJumpHeight = app.screen.height * 0.75;
 
 // Массив кувшинок и переменная для отслеживания текущей кувшинки
@@ -54,31 +54,63 @@ let lilyPadSpeed = 1;
 const maxLilyPadSpeed = 3;
 let isGameOver = false;
 
-// Функция для создания новой кувшинки
-function createLilyPad(xPosition) {
+// Настройки для расстояний между кувшинками
+const minDistance = 200; // Минимальное расстояние между кувшинками
+const maxDistance = 400; // Максимальное расстояние между кувшинками
+
+// Функция для создания новой кувшинки с разным расстоянием
+function createLilyPad(previousX) {
   const lilyPadTexture = PIXI.Texture.from('img/lilyPad.png');
   const lilyPad = new PIXI.Sprite(lilyPadTexture);
 
   lilyPad.anchor.set(0.5);
-  lilyPad.y = app.screen.height - 50; // Отображаем кувшинку у нижнего края экрана
+  lilyPad.y = app.screen.height - 50; // Устанавливаем кувшинку у нижнего края экрана
+
+  // Генерируем случайное расстояние для новой кувшинки
+  const randomDistance = minDistance + Math.random() * (maxDistance - minDistance);
+  lilyPad.x = previousX + randomDistance;
+
   lilyPad.width = frog.width * 3;
   lilyPad.height = frog.height;
-  lilyPad.x = xPosition;
+
   app.stage.addChild(lilyPad);
   lilyPads.push(lilyPad);
 }
 
-// Создаем начальные кувшинки
-createLilyPad(app.screen.width / 4);
+// Создаем начальные кувшинки с разным расстоянием
+let initialX = app.screen.width / 4;
+createLilyPad(initialX);
 currentLilyPad = lilyPads[0];
 frog.x = currentLilyPad.x;
 frog.y = currentLilyPad.y - frog.height / 2.5;
 
-let initialX = frog.x + 300;
+// Создаем оставшиеся начальные кувшинки с случайным расстоянием
 for (let i = 1; i < 5; i++) {
-  createLilyPad(initialX);
-  initialX += 300;
+  initialX = lilyPads[lilyPads.length - 1].x; // Получаем X координату последней созданной кувшинки
+  createLilyPad(initialX); // Создаем новую кувшинку с случайным расстоянием от предыдущей
 }
+
+// Обновляем цикл создания кувшинок при движении
+app.ticker.add(() => {
+  if (!isGameOver) {
+    applyGravity();
+
+    // Двигаем кувшинки справа налево
+    lilyPads.forEach(lilyPad => {
+      lilyPad.x -= lilyPadSpeed;
+    });
+
+    // Удаляем кувшинку за пределами экрана и добавляем новую кувшинку справа с случайным расстоянием
+    if (lilyPads[0].x < -lilyPads[0].width) {
+      const removedLilyPad = lilyPads.shift();
+      app.stage.removeChild(removedLilyPad);
+
+      const lastLilyPadX = lilyPads[lilyPads.length - 1].x;
+      createLilyPad(lastLilyPadX); // Создаем новую кувшинку с случайным расстоянием
+    }
+  }
+});
+
 
 // Функция для установки позиции жабки и кувшинок при изменении размера экрана
 function setPositionForBottom() {
@@ -179,7 +211,7 @@ function applyGravity() {
         localStorage.setItem('highScore', highScore);
       }
 
-      lilyPadSpeed = Math.min(lilyPadSpeed * 1.05, maxLilyPadSpeed);
+      lilyPadSpeed = Math.min(lilyPadSpeed * 1, maxLilyPadSpeed);
       break;
     }
   }
