@@ -50,7 +50,7 @@ const maxJumpHeight = app.screen.height * 0.75;
 // Массив кувшинок и переменная для отслеживания текущей кувшинки
 const lilyPads = [];
 let currentLilyPad = null;
-let lilyPadSpeed = 1;
+let lilyPadSpeed = 1.5;
 const maxLilyPadSpeed = 3;
 let isGameOver = false;
 
