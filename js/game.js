@@ -54,42 +54,13 @@ let lilyPadSpeed = 1;
 const maxLilyPadSpeed = 3;
 let isGameOver = false;
 
-// Функция для установки начальных позиций объектов
-function setPositionForMobile() {
-  const isMobile = window.innerWidth < 768;
-
-  // Устанавливаем Y-координаты для всех кувшинок при первом запуске или изменении размера
-  lilyPads.forEach((lilyPad) => {
-    lilyPad.y = isMobile ? app.screen.height - 25 : app.screen.height - 150;
-  });
-
-  // Обновляем позицию жабки
-  if (currentLilyPad) {
-    frog.y = currentLilyPad.y - frog.height / 2.5;
-  }
-}
-
-// Вызываем функцию установки позиции при загрузке
-setPositionForMobile();
-
-// Обработчик изменения размера экрана
-window.addEventListener('resize', () => {
-  app.renderer.resize(window.innerWidth, window.innerHeight);
-  setPositionForMobile();
-  scoreText.x = app.screen.width - 20;
-  highScoreText.x = app.screen.width - 20;
-  highScoreText.y = scoreText.height + 20;
-});
-
 // Функция для создания новой кувшинки
 function createLilyPad(xPosition) {
   const lilyPadTexture = PIXI.Texture.from('img/lilyPad.png');
   const lilyPad = new PIXI.Sprite(lilyPadTexture);
 
-  const isMobile = window.innerWidth < 768; // Проверка на мобильное устройство
   lilyPad.anchor.set(0.5);
-  lilyPad.y = isMobile ? app.screen.height - 25 : app.screen.height - 150; // Позиция по Y
-
+  lilyPad.y = app.screen.height - 50; // Отображаем кувшинку у нижнего края экрана
   lilyPad.width = frog.width * 3;
   lilyPad.height = frog.height;
   lilyPad.x = xPosition;
@@ -109,6 +80,32 @@ for (let i = 1; i < 5; i++) {
   initialX += 300;
 }
 
+// Функция для установки позиции жабки и кувшинок при изменении размера экрана
+function setPositionForBottom() {
+  lilyPads.forEach((lilyPad) => {
+    lilyPad.y = app.screen.height - 50; // Устанавливаем кувшинки у нижнего края экрана
+  });
+
+  // Обновляем позицию жабки
+  if (currentLilyPad) {
+    frog.y = currentLilyPad.y - frog.height / 2.5;
+  }
+}
+
+// Вызываем функцию установки позиции при загрузке
+setPositionForBottom();
+
+// Обработчик изменения размера экрана
+window.addEventListener('resize', () => {
+  app.renderer.resize(window.innerWidth, window.innerHeight);
+  setPositionForBottom();
+  scoreText.x = app.screen.width - 20;
+  highScoreText.x = app.screen.width - 20;
+  highScoreText.y = scoreText.height + 20;
+});
+
+// Остальной код для прыжков, управления и завершения игры остается без изменений
+
 // Настройки прыжка
 let isJumping = false;
 let isVoiceJumping = false;
@@ -126,14 +123,12 @@ window.addEventListener('keyup', (event) => {
   }
 });
 
-// Функция для начала прыжка
 function startJump() {
   isJumping = true;
   frog.vy = jumpPower;
   frog.vx = horizontalSpeed;
 }
 
-// Функция для завершения прыжка
 function endJump() {
   isJumping = false;
   if (!isVoiceJumping) {
@@ -194,7 +189,6 @@ function applyGravity() {
   }
 }
 
-// Функция для завершения игры
 function endGame() {
   isGameOver = true;
 
