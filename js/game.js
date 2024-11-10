@@ -17,18 +17,16 @@ const scoreStyle = new PIXI.TextStyle({
 });
 
 const scoreText = new PIXI.Text(`Score: ${score}`, scoreStyle);
-scoreText.anchor.set(1, 0); // Устанавливаем якорь справа сверху
-scoreText.x = app.screen.width - 20; // Отступ от правого края
-scoreText.y = 20; // Отступ от верхнего края
+scoreText.anchor.set(1, 0);
+scoreText.x = app.screen.width - 20;
+scoreText.y = 20;
 app.stage.addChild(scoreText);
 
-// Рекорд
 const highScoreText = new PIXI.Text(`High Score: ${highScore}`, scoreStyle);
-highScoreText.anchor.set(1, 0); // Устанавливаем якорь справа сверху
-highScoreText.x = app.screen.width - 20; // Отступ от правого края
-highScoreText.y = 60; // Отступ под текущим счетом
+highScoreText.anchor.set(1, 0);
+highScoreText.x = app.screen.width - 20;
+highScoreText.y = 60;
 app.stage.addChild(highScoreText);
-
 
 // Добавляем Canvas в DOM
 document.body.appendChild(app.view);
@@ -44,102 +42,100 @@ frog.vx = 0;
 app.stage.addChild(frog);
 
 // Настройки прыжка
-const jumpPower = -15; // Начальная вертикальная скорость при прыжке
-const gravity = 0.8;   // Гравитация, притягивающая жабку вниз
-const horizontalSpeed = 5; // Скорость горизонтального движения
-const maxJumpHeight = app.screen.height * 0.75; // Максимальная высота прыжка (75% высоты экрана)
+const jumpPower = -15;
+const gravity = 0.8;
+const horizontalSpeed = 5;
+const maxJumpHeight = app.screen.height * 0.75;
 
 // Массив кувшинок и переменная для отслеживания текущей кувшинки
 const lilyPads = [];
 let currentLilyPad = null;
-
-// Устанавливаем начальную скорость движения кувшинок
 let lilyPadSpeed = 1;
-const maxLilyPadSpeed = 3; // Ограничение максимальной скорости кувшинок
-let isGameOver = false; // Флаг для остановки игры
+const maxLilyPadSpeed = 3;
+let isGameOver = false;
 
-// Создаем первую кувшинку прямо под жабкой
-createLilyPad(app.screen.width / 4);
-currentLilyPad = lilyPads[0];
-frog.x = currentLilyPad.x;
-frog.y = currentLilyPad.y - frog.height / 2.5;
-
-// Создаем остальные кувшинки
-let initialX = frog.x + 300;
-for (let i = 1; i < 5; i++) {
-  createLilyPad(initialX);
-  initialX += 300;
-}
-
-// Функция для установки позиции объектов
+// Функция для установки начальных позиций объектов
 function setPositionForMobile() {
-  const isMobile = window.innerWidth < 768; // Проверка на мобильное устройство
+  const isMobile = window.innerWidth < 768;
 
-  // Устанавливаем Y-координаты для лилий и жабки в зависимости от устройства
+  // Устанавливаем Y-координаты для всех кувшинок при первом запуске или изменении размера
   lilyPads.forEach((lilyPad) => {
-    lilyPad.y = isMobile ? app.screen.height - 100 : app.screen.height - 150;
+    lilyPad.y = isMobile ? app.screen.height - 25 : app.screen.height - 150;
   });
 
-  frog.y = currentLilyPad.y - frog.height / 2.5;
+  // Обновляем позицию жабки
+  if (currentLilyPad) {
+    frog.y = currentLilyPad.y - frog.height / 2.5;
+  }
 }
 
 // Вызываем функцию установки позиции при загрузке
 setPositionForMobile();
 
-// Вызываем при изменении размера экрана
+// Обработчик изменения размера экрана
 window.addEventListener('resize', () => {
   app.renderer.resize(window.innerWidth, window.innerHeight);
   setPositionForMobile();
-  // Обновление позиции текста счёта и других элементов при изменении экрана
   scoreText.x = app.screen.width - 20;
   highScoreText.x = app.screen.width - 20;
   highScoreText.y = scoreText.height + 20;
 });
-
 
 // Функция для создания новой кувшинки
 function createLilyPad(xPosition) {
   const lilyPadTexture = PIXI.Texture.from('img/lilyPad.png');
   const lilyPad = new PIXI.Sprite(lilyPadTexture);
 
+  const isMobile = window.innerWidth < 768; // Проверка на мобильное устройство
   lilyPad.anchor.set(0.5);
-  lilyPad.y = app.screen.height - 150;
+  lilyPad.y = isMobile ? app.screen.height - 25 : app.screen.height - 150; // Позиция по Y
+
   lilyPad.width = frog.width * 3;
   lilyPad.height = frog.height;
-
   lilyPad.x = xPosition;
   app.stage.addChild(lilyPad);
   lilyPads.push(lilyPad);
 }
 
+// Создаем начальные кувшинки
+createLilyPad(app.screen.width / 4);
+currentLilyPad = lilyPads[0];
+frog.x = currentLilyPad.x;
+frog.y = currentLilyPad.y - frog.height / 2.5;
+
+let initialX = frog.x + 300;
+for (let i = 1; i < 5; i++) {
+  createLilyPad(initialX);
+  initialX += 300;
+}
+
 // Настройки прыжка
 let isJumping = false;
-let isVoiceJumping = false; // Флаг для отслеживания прыжка от громкости звука
+let isVoiceJumping = false;
 
 // Добавляем слушатель для нажатия клавиши пробел
 window.addEventListener('keydown', (event) => {
   if (event.code === 'Space' && !isJumping && !isGameOver) {
-    startJump(); // Начинаем прыжок при нажатии пробела
+    startJump();
   }
 });
 
-// Добавляем слушатель для отпускания клавиши пробел
 window.addEventListener('keyup', (event) => {
   if (event.code === 'Space' && !isGameOver) {
-    endJump(); // Завершаем прыжок при отпускании пробела
+    endJump();
   }
 });
 
 // Функция для начала прыжка
 function startJump() {
   isJumping = true;
-  frog.vy = jumpPower; // Задаем начальную вертикальную скорость вверх
-  frog.vx = horizontalSpeed; // Устанавливаем начальную горизонтальную скорость вправо
+  frog.vy = jumpPower;
+  frog.vx = horizontalSpeed;
 }
 
 // Функция для завершения прыжка
 function endJump() {
-  isJumping = false; // После отпускания пробела гравитация начинает тянуть жабку вниз
+  isJumping = false;
   if (!isVoiceJumping) {
     frog.vy += gravity;
   }
@@ -147,14 +143,14 @@ function endJump() {
 
 // Гравитация и движение
 function applyGravity() {
-  if (isGameOver) return; // Прекращаем движение, если игра окончена
+  if (isGameOver) return;
 
   if (isJumping || isVoiceJumping) {
-    frog.y += frog.vy; // Продолжаем подъем
-    frog.x += frog.vx; // Продолжаем движение вправо
+    frog.y += frog.vy;
+    frog.x += frog.vx;
 
     if (frog.y <= app.screen.height - maxJumpHeight) {
-      frog.y = app.screen.height - maxJumpHeight; // Ограничиваем высоту
+      frog.y = app.screen.height - maxJumpHeight;
       frog.vy = 0;
     }
   } else {
@@ -163,7 +159,6 @@ function applyGravity() {
     frog.x += frog.vx;
   }
 
-  // Проверка приземления на кувшинку
   let landedOnLilyPad = false;
   for (let i = 0; i < lilyPads.length; i++) {
     const lilyPad = lilyPads[i];
@@ -180,25 +175,20 @@ function applyGravity() {
       currentLilyPad = lilyPad;
       landedOnLilyPad = true;
 
-       // Увеличиваем счет и обновляем текст
-  score++;
-  scoreText.text = `Score: ${score}`;
+      score++;
+      scoreText.text = `Score: ${score}`;
 
-  // Обновляем рекорд, если счет превысил его
-  if (score > highScore) {
-    highScore = score;
-    highScoreText.text = `High Score: ${highScore}`;
-    localStorage.setItem('highScore', highScore); // Сохраняем рекорд в localStorage
-  }
+      if (score > highScore) {
+        highScore = score;
+        highScoreText.text = `High Score: ${highScore}`;
+        localStorage.setItem('highScore', highScore);
+      }
 
-      // Увеличиваем скорость кувшинок на 5%, с ограничением максимальной скорости
       lilyPadSpeed = Math.min(lilyPadSpeed * 1.05, maxLilyPadSpeed);
-      console.log("Успешный прыжок! Новая скорость кувшинок:", lilyPadSpeed);
       break;
     }
   }
 
-  // Если жабка не приземлилась на кувшинку и вышла за экран, заканчиваем игру
   if (!landedOnLilyPad && frog.y > app.screen.height) {
     endGame();
   }
@@ -208,7 +198,6 @@ function applyGravity() {
 function endGame() {
   isGameOver = true;
 
-  // Отображение текста "Game Over"
   const style = new PIXI.TextStyle({
     fontFamily: 'Arial',
     fontSize: 64,
@@ -222,21 +211,17 @@ function endGame() {
   gameOverText.y = app.screen.height / 2;
   app.stage.addChild(gameOverText);
 
-  // Показываем кнопку перезапуска
   document.getElementById('restartButton').style.display = 'block';
 }
 
-// Главный игровой цикл
 app.ticker.add(() => {
   if (!isGameOver) {
     applyGravity();
 
-    // Двигаем кувшинки справа налево
     lilyPads.forEach(lilyPad => {
       lilyPad.x -= lilyPadSpeed;
     });
 
-    // Удаляем кувшинку за пределами экрана и добавляем новую кувшинку справа
     if (lilyPads[0].x < -lilyPads[0].width) {
       const removedLilyPad = lilyPads.shift();
       app.stage.removeChild(removedLilyPad);
@@ -246,13 +231,12 @@ app.ticker.add(() => {
   }
 });
 
-// Добавляем слушатель к кнопке перезапуска
 document.getElementById('restartButton').addEventListener('click', restartGame);
 
 function restartGame() {
-  score = 0; // Сбрасываем текущий счет
-  scoreText.text = `Score: ${score}`; // Обновляем текст счета
-  location.reload(); // Перезагружает страницу, чтобы перезапустить игру
+  score = 0;
+  scoreText.text = `Score: ${score}`;
+  location.reload();
 }
 
 // Управление голосом с помощью Web Audio API
@@ -272,7 +256,6 @@ async function setupAudio() {
       analyser.getByteFrequencyData(dataArray);
       const volume = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
 
-      // Порог чувствительности
       const volumeThreshold = 20;
 
       if (volume > volumeThreshold && !isVoiceJumping && !isGameOver) {
