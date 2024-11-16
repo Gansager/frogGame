@@ -268,37 +268,52 @@ function restartGame() {
 // Управление голосом с помощью Web Audio API
 async function setupAudio() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
+      // Проверяем, давал ли пользователь разрешение ранее
+      const permissionGranted = localStorage.getItem('audioPermissionGranted');
+      if (!permissionGranted) {
+          // Если разрешение еще не сохранено, запрашиваем его
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          localStorage.setItem('audioPermissionGranted', 'true'); // Сохраняем разрешение
+          initializeAudioProcessing(stream);
+      } else {
+          // Если разрешение уже есть, подключаемся к микрофону без запроса
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          initializeAudioProcessing(stream);
+      }
+  } catch (err) {
+      console.error("Error accessing audio stream:", err);
+  }
+}
 
-    const source = audioContext.createMediaStreamSource(stream);
-    source.connect(analyser);
+function initializeAudioProcessing(stream) {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const analyser = audioContext.createAnalyser();
+  analyser.fftSize = 256;
 
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+  const source = audioContext.createMediaStreamSource(stream);
+  source.connect(analyser);
 
-    function checkVolume() {
+  const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+  function checkVolume() {
       analyser.getByteFrequencyData(dataArray);
       const volume = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
 
       const volumeThreshold = 20;
 
       if (volume > volumeThreshold && !isVoiceJumping && !isGameOver) {
-        isVoiceJumping = true;
-        startJump();
+          isVoiceJumping = true;
+          startJump();
       } else if (volume <= volumeThreshold && isVoiceJumping) {
-        isVoiceJumping = false;
-        endJump();
+          isVoiceJumping = false;
+          endJump();
       }
 
       requestAnimationFrame(checkVolume);
-    }
-
-    checkVolume();
-  } catch (err) {
-    console.error("Error accessing audio stream:", err);
   }
+
+  checkVolume();
 }
+
 
 setupAudio();
