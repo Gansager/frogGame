@@ -2,18 +2,18 @@
     "name": "Frog Game",
     "short_name": "FrogGame",
     "description": "Voice-controlled frog-jumping game",
-    "start_url": "./index.html",
+    "start_url": "/frogGame/index.html",
     "display": "standalone",
     "background_color": "#87CEEB",
     "theme_color": "#87CEEB",
     "icons": [
       {
-        "src": "./img/icon-192x192.png",
+        "src": "/frogGame/img/icon-192x192.png",
         "sizes": "192x192",
         "type": "image/png"
       },
       {
-        "src": "./img/icon-512x512.png",
+        "src": "/frogGame/img/icon-512x512.png",
         "sizes": "512x512",
         "type": "image/png"
       }

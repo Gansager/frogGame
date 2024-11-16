@@ -351,7 +351,7 @@ setupAudio();
 
 // Регистрируем Service Worker для PWA
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js')
+  navigator.serviceWorker.register('/frogGame/sw.js')
     .then(() => console.log('Service Worker зарегистрирован'))
     .catch((error) => console.error('Ошибка регистрации Service Worker:', error));
 }

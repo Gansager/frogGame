@@ -4,12 +4,12 @@ self.addEventListener('install', (event) => {
       caches.open('frog-jump-cache').then((cache) => {
         return cache.addAll([
           '/',
-          '/index.html',
-          '/js/game.js',
-          '/css/style.css',
-          '/img/frog.png',
-          '/img/lilyPad.png',
-          '/manifest.json'
+          './index.html',
+          './js/game.js',
+          './css/style.css',
+          './img/frog.png',
+          './img/lilyPad.png',
+          './manifest.json'
         ]);
       })
     );
