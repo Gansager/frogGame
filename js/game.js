@@ -262,8 +262,39 @@ document.getElementById('restartButton').addEventListener('click', restartGame);
 function restartGame() {
   score = 0;
   scoreText.text = `Score: ${score}`;
-  location.reload();
+  isGameOver = false;
+  frog.vy = 0;
+  frog.vx = 0;
+  lilyPadSpeed = 1.5;
+
+  // Сброс позиции жабки
+  frog.x = currentLilyPad.x;
+  frog.y = currentLilyPad.y - frog.height / 2.5;
+
+  // Очистка существующих кувшинок и создание новых
+  lilyPads.forEach(lilyPad => app.stage.removeChild(lilyPad));
+  lilyPads.length = 0; // очищаем массив кувшинок
+
+  // Создаем начальные кувшинки с разным расстоянием
+  let initialX = app.screen.width / 4;
+  createLilyPad(initialX);
+  currentLilyPad = lilyPads[0];
+  frog.x = currentLilyPad.x;
+  frog.y = currentLilyPad.y - frog.height / 2.5;
+
+  for (let i = 1; i < 5; i++) {
+    initialX = lilyPads[lilyPads.length - 1].x;
+    createLilyPad(initialX);
+  }
+
+  // Убираем текст "Game Over" при перезапуске
+  const gameOverText = app.stage.children.find(child => child.text === 'Game Over');
+  if (gameOverText) app.stage.removeChild(gameOverText);
+
+  // Скрываем кнопку Restart
+  document.getElementById('restartButton').style.display = 'none';
 }
+
 
 // Управление голосом с помощью Web Audio API
 async function setupAudio() {
