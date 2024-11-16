@@ -355,3 +355,33 @@ if ('serviceWorker' in navigator) {
     .then(() => console.log('Service Worker зарегистрирован'))
     .catch((error) => console.error('Ошибка регистрации Service Worker:', error));
 }
+
+// Код для добавления на главный экран
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  const installButton = document.createElement('button');
+  installButton.innerText = 'Install app';
+  installButton.style.position = 'absolute';
+  installButton.style.bottom = '20px';
+  installButton.style.right = '20px';
+  installButton.style.padding = '10px 20px';
+  installButton.style.fontSize = '16px';
+  document.body.appendChild(installButton);
+
+  installButton.addEventListener('click', () => {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('Пользователь согласился на установку');
+      } else {
+        console.log('Пользователь отклонил установку');
+      }
+      deferredPrompt = null;
+      document.body.removeChild(installButton);
+    });
+  });
+});
