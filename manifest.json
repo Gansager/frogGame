@@ -2,7 +2,7 @@
     "name": "Frog Game",
     "short_name": "FrogGame",
     "description": "Voice-controlled frog-jumping game",
-    "start_url": "/index.html",
+    "start_url": "./index.html",
     "display": "standalone",
     "background_color": "#87CEEB",
     "theme_color": "#87CEEB",
